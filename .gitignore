@@ -1,0 +1,21 @@
+# Secrets — never commit these
+backend/.env
+
+# Virtual environment
+backend/.venv/
+
+# Generated data — these are rebuilt from PDFs, no need to version them
+backend/uploads/*
+backend/indexes/*
+backend/graphs/*
+backend/metadata.json
+!backend/uploads/.gitkeep
+!backend/indexes/.gitkeep
+!backend/graphs/.gitkeep
+
+# Python cache
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store

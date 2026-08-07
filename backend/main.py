@@ -1,0 +1,130 @@
+"""
+BizRAG-Agent — FastAPI backend entrypoint.
+
+Phase 1 scope: document upload + ingestion status.
+Routes added in later phases (query, verify, graph, compare) get
+registered here as they're built.
+"""
+import logging
+import shutil
+import uuid
+from pathlib import Path
+from typing import Optional
+
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+import config
+import ingestion
+import metadata_store
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("bizrag.main")
+
+app = FastAPI(
+    title="BizRAG-Agent API",
+    description="Agentic Vector RAG + GraphRAG business intelligence backend",
+    version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+MAX_UPLOAD_MB = 50
+
+
+class DocumentStatus(BaseModel):
+    doc_id: str
+    filename: str
+    status: str
+    chunk_count: Optional[int] = None
+    entity_count: Optional[int] = None
+    char_count: Optional[int] = None
+    error: Optional[str] = None
+    failed_stage: Optional[str] = None
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "bizrag-agent-backend"}
+
+
+@app.post("/upload")
+async def upload_document(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+):
+    if file.content_type != "application/pdf" and not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(400, detail="Only PDF files are supported.")
+
+    tmp_name = f"{uuid.uuid4()}.pdf"
+    tmp_path = config.UPLOAD_DIR / tmp_name
+    size = 0
+    max_bytes = MAX_UPLOAD_MB * 1024 * 1024
+
+    with open(tmp_path, "wb") as out:
+        while chunk := await file.read(1024 * 1024):
+            size += len(chunk)
+            if size > max_bytes:
+                out.close()
+                tmp_path.unlink(missing_ok=True)
+                raise HTTPException(
+                    413, detail=f"File exceeds {MAX_UPLOAD_MB}MB limit."
+                )
+            out.write(chunk)
+
+    if size == 0:
+        tmp_path.unlink(missing_ok=True)
+        raise HTTPException(400, detail="Uploaded file is empty.")
+
+    background_tasks.add_task(
+        _run_ingestion_safely, str(tmp_path), file.filename
+    )
+
+    return {
+        "message": "Upload received, processing started.",
+        "filename": file.filename,
+        "poll_hint": "GET /documents to find your doc_id once processing starts.",
+    }
+
+
+def _run_ingestion_safely(tmp_path: str, filename: str):
+    try:
+        ingestion.ingest_document(tmp_path, filename)
+    except ingestion.IngestionError as e:
+        logger.warning("Ingestion failed for %s at stage %s: %s", filename, e.stage, e.message)
+    except Exception:
+        logger.exception("Unexpected ingestion failure for %s", filename)
+
+
+@app.get("/documents", response_model=list[DocumentStatus])
+def list_documents():
+    return metadata_store.list_documents()
+
+
+@app.get("/documents/{doc_id}", response_model=DocumentStatus)
+def get_document(doc_id: str):
+    record = metadata_store.get_document(doc_id)
+    if not record:
+        raise HTTPException(404, detail="Document not found.")
+    return record
+
+
+@app.delete("/documents/{doc_id}")
+def delete_document(doc_id: str):
+    record = metadata_store.get_document(doc_id)
+    if not record:
+        raise HTTPException(404, detail="Document not found.")
+
+    index_path = Path(record.get("index_path", ""))
+    if index_path.exists():
+        shutil.rmtree(index_path, ignore_errors=True)
+
+    metadata_store.delete_document(doc_id)
+    return {"message": "Deleted", "doc_id": doc_id}
