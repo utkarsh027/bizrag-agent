@@ -10,6 +10,7 @@ import shutil
 import uuid
 from pathlib import Path
 from typing import Optional
+from retrieval.vector_rag import vector_rag_query, RetrievalError
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -92,6 +93,34 @@ async def upload_document(
         "filename": file.filename,
         "poll_hint": "GET /documents to find your doc_id once processing starts.",
     }
+
+class QueryRequest(BaseModel):
+    query: str
+    doc_id: str
+    top_k: int = 5
+
+
+@app.post("/query")
+def query_document(request: QueryRequest):
+    record = metadata_store.get_document(request.doc_id)
+    if not record:
+        raise HTTPException(404, detail="Document not found.")
+    if record.get("status") != "ready":
+        raise HTTPException(
+            409,
+            detail=f"Document is not ready yet (status: {record.get('status')}).",
+        )
+
+    try:
+        result = vector_rag_query(request.query, request.doc_id, request.top_k)
+    except RetrievalError as e:
+        raise HTTPException(404, detail=str(e))
+    except Exception as e:
+        logger.exception("Query failed for doc_id=%s", request.doc_id)
+        raise HTTPException(500, detail=f"Query failed: {e}")
+
+    return result
+
 
 
 def _run_ingestion_safely(tmp_path: str, filename: str):

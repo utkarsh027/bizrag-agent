@@ -46,19 +46,29 @@ specifically and flag it as NOT_SUPPORTED / contradicted by evidence.
 
 ---
 
-## Finding 2 — [next observation goes here]
-**Date:**
-**Phase:**
+## Finding 2 — Confirming the phrasing-sensitivity hypothesis
+**Date:** Aug 10, 2026
+**Phase:** Phase 2 (Vector RAG query endpoint)
 
 **What I did:**
-
+Re-asked essentially the same question from Finding 1, but rephrased to
+match the document's own language: "Describe the transformer architecture"
+instead of "What is a transformer model?" Same document, same top_k=5.
 
 **What happened:**
+This time the system gave a complete, accurate, well-structured answer —
+correctly describing the encoder-decoder structure, the 6x stacking, the
+sub-layers (self-attention, add & norm, feed-forward), and residual
+connections, all clearly grounded in the retrieved source chunks.
 
+**Why this matters (my interpretation — replace with your own):**
+This confirms the hypothesis from Finding 1: the earlier failure wasn't a
+retrieval problem (the right chunks were found both times), it was a
+question-phrasing sensitivity problem in the generation step. The LLM
+appears to weight lexical overlap between the question and context more
+than semantic equivalence when deciding whether an answer "exists" in the
+context. This is a specific, testable failure mode I can point to directly
+rather than a vague claim.
 
-**Why this matters:**
+**Proposal section this feeds:** Section 1 (Problem — strengthens the concrete example), Section 4 (Preliminary Evidence — this is a controlled before/after comparison, which is more convincing than a single anecdote)
 
-
-**Proposal section this feeds:**
-
----
