@@ -72,3 +72,30 @@ rather than a vague claim.
 
 **Proposal section this feeds:** Section 1 (Problem — strengthens the concrete example), Section 4 (Preliminary Evidence — this is a controlled before/after comparison, which is more convincing than a single anecdote)
 
+----
+## Finding 3 — Free-tier pipeline scales to a real 80-page SEC filing
+**Date:** Aug 13, 2026
+**Phase:** Phase 3 (Knowledge graph extraction)
+
+**What I did:**
+Uploaded Apple's real, official 2023 Form 10-K (80 pages, downloaded
+directly from investor.apple.com) — a genuine SEC-filed annual report,
+not a synthetic test document — and ran it through the full ingestion
+pipeline including knowledge graph extraction.
+
+**What happened:**
+Successfully processed end-to-end on the free stack: 272,866 characters
+extracted, split into 358 chunks for vector search, and 1,144 entities
+extracted into the knowledge graph via ~91 separate Groq API calls
+(one per ~3000-character section). No errors, no rate limiting, no
+failures at any pipeline stage.
+
+**Why this matters (my interpretation — replace with your own):**
+This demonstrates the free-tier architecture isn't just a toy that works
+on small test files — it scales to a real, dense, 80-page financial
+document roughly 10x larger than my initial test PDF, with zero cost.
+This is meaningful preliminary evidence that a free/local stack (Groq +
+sentence-transformers) is a viable foundation for a business intelligence
+RAG system, not just an academic proof-of-concept limited to toy inputs.
+
+**Proposal section this feeds:** Section 4 (Preliminary Evidence — direct evidence of scalability on a real business document), Section 6 (motivates using real SEC filings like FinQA/FinanceBench in Year 1 evaluation)
