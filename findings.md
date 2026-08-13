@@ -99,3 +99,89 @@ sentence-transformers) is a viable foundation for a business intelligence
 RAG system, not just an academic proof-of-concept limited to toy inputs.
 
 **Proposal section this feeds:** Section 4 (Preliminary Evidence — direct evidence of scalability on a real business document), Section 6 (motivates using real SEC filings like FinQA/FinanceBench in Year 1 evaluation)
+
+--
+## Finding 4 — GraphRAG retrieves the right facts but drowns them in noise (hub-node explosion)
+**Date:** Aug 13, 2026
+**Phase:** Phase 4 (GraphRAG query endpoint)
+
+**What I did:**
+Asked the same question to both systems on the real Apple 10-K:
+"How do risk factors affect Apple's revenue?"
+- Vector RAG: "Not found in document" (Finding 3)
+- GraphRAG: also "Not found in document," despite retrieving 300+ graph facts
+
+**What happened:**
+Unlike vector RAG, GraphRAG's retrieval actually surfaced directly relevant
+facts: "foreign exchange rate risk --[affects]--> net sales" and
+"...--[affects]--> gross margins" were both present in the retrieved
+subgraph. But the final answer still said "not found." Inspecting the
+full `graph_facts` output revealed why: because "Apple Inc." is a hub
+node connected to hundreds of other entities in the document (board
+members, lease terms, tax details, product launches...), a 2-hop walk
+from it pulled in over 300 relationship lines - the two genuinely
+relevant facts were buried in a mostly-irrelevant mass of context.
+
+**Why this matters (my interpretation — replace with your own):**
+This is a different failure mode from Findings 1-2 (phrasing sensitivity)
+- this is "hub-node explosion" in multi-hop graph traversal: naively
+walking N hops from a highly-connected node doesn't give a focused
+neighborhood, it gives a large fraction of the whole graph. This is a
+known challenge in the GraphRAG literature - Edge et al. (2024) address
+a related problem with community detection/summarization rather than
+raw multi-hop traversal, which my simple implementation doesn't yet do.
+This is a concrete, testable direction for improving retrieval quality:
+either reduce hop depth for high-degree nodes, rank/filter retrieved
+facts by relevance before passing to the LLM, or add lightweight
+community clustering as the original GraphRAG paper does.
+
+**Proposal section this feeds:** Section 2 (directly connects to and critiques the Edge et al. GraphRAG citation), Section 3 (motivates a specific technical improvement: relevance-filtered or clustered subgraph retrieval instead of naive N-hop expansion), Section 4 (concrete evidence of a real limitation found through testing, not assumed)
+
+---
+## Finding 5 — Free-tier token limits are a real constraint under heavy testing
+**Date:** Aug 13, 2026
+**Phase:** Phase 4 (GraphRAG testing)
+
+**What happened:** Hit Groq's free-tier daily token limit (100,000 TPD)
+after a day of heavy testing - large documents (Phase 3 graph building
+alone made ~91 calls on the 80-page 10-K) plus repeated query testing.
+The system failed gracefully with a clear 500 error instead of crashing.
+
+**Why this matters:** A concrete, honest limitation of building on a free
+tier - worth noting directly in the proposal rather than glossing over.
+Also suggests a concrete engineering improvement: the HOP_DEPTH=2 fix
+sends 300+ facts per query, burning tokens fast - reducing hop depth
+(the fix I'm testing right now) should also reduce token usage per
+query, not just improve answer focus.
+
+**Proposal section this feeds:** Section 4 (honest evidence-based limitations), motivates future work on cost-efficient retrieval (Section 5/Year 2)
+
+
+----
+## Finding 6 — Reducing hop depth doesn't fix hub-node explosion; naive graph traversal needs relevance filtering
+**Date:** Aug 13, 2026
+**Phase:** Phase 4 (GraphRAG tuning)
+
+**What I did:** Reduced HOP_DEPTH from 2 to 1 and re-ran the identical
+query, expecting a smaller, more focused context.
+
+**What happened:** The returned fact count barely shrank, because
+"Apple Inc." has hundreds of *direct* (1-hop) connections - it's a hub
+even at depth 1. Worse, the two most relevant facts from the depth-2 run
+("foreign exchange rate risk affects net sales/gross margins") were lost
+entirely at depth 1, since they were reachable only via an intermediate
+node. The fix traded away the right answer for a marginal noise reduction.
+
+**Why this matters:** Hop depth is the wrong lever for this problem.
+The real fix is relevance filtering - ranking retrieved facts by
+similarity to the actual question (e.g., embedding each fact and keeping
+only the top N most relevant, similar to a reranking step) rather than
+naive graph-distance cutoffs. This is a more precise, testable design
+insight than "make the graph smaller."
+
+**Proposal section this feeds:** Section 3 (concrete proposed
+improvement: embedding-based relevance filtering of retrieved subgraph
+facts before generation - essentially a lightweight reranker), Section 4
+(shows iterative, evidence-driven engineering, not just "it worked")
+
+---

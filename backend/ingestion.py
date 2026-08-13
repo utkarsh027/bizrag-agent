@@ -14,6 +14,7 @@ and render a live progress bar instead of a spinner.
 import logging
 import uuid
 from pathlib import Path
+from knowledge_graph import build_knowledge_graph
 
 import fitz  # PyMuPDF
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -121,15 +122,18 @@ def ingest_document(pdf_path: str, original_filename: str) -> dict:
         _set_status(doc_id, "embedding")
         index_path = embed_and_index(chunks, doc_id)
 
+    
         _set_status(doc_id, "building_graph")
-        # Phase 3 will replace this stub with build_knowledge_graph(text, doc_id)
-        entity_count = 0
+        graph = build_knowledge_graph(text, doc_id)
+        entity_count = graph.number_of_nodes()
+        relation_count = graph.number_of_edges()
 
         _set_status(
             doc_id,
             "ready",
             chunk_count=len(chunks),
             entity_count=entity_count,
+            relation_count=relation_count,
             index_path=str(index_path),
             char_count=len(text),
         )
