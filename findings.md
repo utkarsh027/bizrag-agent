@@ -185,3 +185,88 @@ facts before generation - essentially a lightweight reranker), Section 4
 (shows iterative, evidence-driven engineering, not just "it worked")
 
 ---
+## Finding 7 — Relevance filtering fixed retrieval noise, but exposed generation as the real bottleneck
+**Date:** Aug 14, 2026
+**Phase:** Phase 4 (GraphRAG - relevance filtering fix)
+
+**What I did:** Added embedding-based reranking to GraphRAG - after
+graph traversal, rank all retrieved facts by similarity to the question
+and keep only the top 25, instead of dumping all 300+ raw facts.
+
+**What happened:** The fix worked precisely as intended - fact count
+dropped from 300+ (mostly irrelevant) to 25 (almost entirely on-topic:
+risk factors, revenue figures, deferred revenue, R&D expenses). But the
+final answer was still "Not found in document," despite the context now
+containing exactly the kind of information a human analyst would use to
+answer the question.
+
+**Why this matters:** This isolates the failure to the generation step,
+not retrieval. I now have direct evidence across three experiments
+(Findings 1, 4, 7) that retrieval quality and generation faithfulness
+are separable problems - a system can retrieve well and still reason
+poorly. This is the central justification for claim-level faithfulness
+verification (Phase 5): it's not a nice-to-have add-on, it's addressing
+a failure mode that persists even after retrieval is fixed.
+
+**Proposal section this feeds:** Section 1 (sharpens the problem statement precisely), Section 3 (strongest single piece of evidence for why the verifier is the core contribution, not vector RAG or GraphRAG themselves)
+
+---
+## Finding 8 — The faithfulness verifier itself has a faithfulness problem (false positive on unsupported causal claim)
+**Date:** Aug 14, 2026
+**Phase:** Phase 5 (Faithfulness verifier)
+
+**What I did:** Deliberately tested the verifier with an answer containing
+an unsupported causal claim ("foreign exchange rate risk affects Apple's
+revenue") against evidence that only stated the two facts separately,
+with no explicit causal or correlational language connecting them.
+
+**What happened:** The NLI model (cross-encoder/nli-deberta-v3-base)
+marked both claims as SUPPORTED with 99%+ confidence - a clear false
+positive. It appears to have relied on topical/lexical overlap between
+the claim and evidence rather than genuine logical entailment.
+
+**Why this matters:** This is a significant, specific limitation of using
+an off-the-shelf, general-purpose NLI model for financial/business
+faithfulness checking. General NLI models are trained on everyday
+sentence pairs (MNLI/SNLI), not dense financial text with implicit
+causal reasoning - they may not distinguish "topically related" from
+"logically entailed" in this domain. This directly validates the
+proposal's premise that claim-level faithfulness verification for
+business documents is an open research problem, not a solved
+engineering task - a naive implementation (what I've built) produces
+false positives on exactly the kind of unsupported inferential leap that
+matters most to catch.
+
+**Proposal section this feeds:** Section 2 (direct evidence supporting
+the "has not been systematically evaluated" gap claim), Section 3
+(motivates domain-specific NLI fine-tuning or a custom verifier as
+future/thesis work, not just applying an off-the-shelf model), Section 5
+(Year 2 - concrete plan: fine-tune or evaluate NLI models specifically
+on financial claim-evidence pairs, e.g. using FinQA-style data)
+--
+## Finding 9 — Verifier reliably catches direct contradictions (control test)
+**Date:** Aug 14, 2026
+**Phase:** Phase 5 (Faithfulness verifier)
+
+**What I did:** Control test - gave the verifier a claim with an
+unambiguous, direct numeric contradiction ("$500,000 million" vs. the
+evidence's actual "$298,085 million") to check whether it works at all
+for the clearest possible case.
+
+**What happened:** Correctly labeled NOT_SUPPORTED / CONTRADICTION with
+100% confidence.
+
+**Why this matters:** This confirms the verifier isn't broken outright -
+it reliably catches direct, explicit factual contradictions. Combined
+with Finding 8, this precisely scopes the actual limitation: the model
+handles direct numeric/factual contradiction well, but fails on implied
+causal or relational claims where the "contradiction" is really an
+unsupported logical leap rather than a conflicting fact. This is a much
+sharper, more defensible characterization than "the verifier doesn't
+work" - it works for one class of errors and not another, which is
+itself a useful, specific research finding.
+
+**Proposal section this feeds:** Section 4 (precise, controlled
+before/after evidence - much stronger than an anecdote), Section 3
+(scopes exactly what future work needs to improve: causal/inferential
+claim verification specifically, not faithfulness checking in general)

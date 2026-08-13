@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Optional
 from retrieval.vector_rag import vector_rag_query, RetrievalError
 from retrieval.graph_rag import graph_rag_query, GraphRetrievalError
+from verification.faithfulness import verify_faithfulness
+
 
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
@@ -143,6 +145,25 @@ def graph_query_document(request: QueryRequest):
         raise HTTPException(500, detail=f"Graph query failed: {e}")
 
     return result
+
+class VerifyRequest(BaseModel):
+    answer: str
+    evidence: list[str]
+
+
+@app.post("/verify")
+def verify_answer(request: VerifyRequest):
+    try:
+        result = verify_faithfulness(request.answer, request.evidence)
+    except Exception as e:
+        logger.exception("Faithfulness verification failed")
+        raise HTTPException(500, detail=f"Verification failed: {e}")
+
+    return result
+
+
+
+
 
 
 def _run_ingestion_safely(tmp_path: str, filename: str):
