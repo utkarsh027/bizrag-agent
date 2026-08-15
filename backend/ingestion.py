@@ -97,13 +97,14 @@ def embed_and_index(chunks: list, doc_id: str) -> Path:
     return index_path
 
 
-def ingest_document(pdf_path: str, original_filename: str) -> dict:
+def ingest_document(pdf_path: str, original_filename: str, doc_id: str = None) -> dict:
+
     """
     Full pipeline entry point. Returns a summary dict.
     Called from a FastAPI BackgroundTask so /upload returns immediately
     and the client polls status via GET /documents/{doc_id}.
     """
-    doc_id = str(uuid.uuid4())
+    doc_id = doc_id or str(uuid.uuid4())
     pdf_path = Path(pdf_path)
 
     metadata_store.save_document(doc_id, {
