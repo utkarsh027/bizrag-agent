@@ -270,3 +270,33 @@ itself a useful, specific research finding.
 before/after evidence - much stronger than an anecdote), Section 3
 (scopes exactly what future work needs to improve: causal/inferential
 claim verification specifically, not faithfulness checking in general)
+
+---
+## Finding 10 — Agentic routing works correctly, but doesn't fix the underlying generation bottleneck
+**Date:** Aug 14, 2026
+**Phase:** Phase 6 (Agentic orchestrator)
+
+**What I did:** Asked the agentic endpoint the same risk-factors question
+used in Findings 4, 6, and 7, to see if automatic strategy selection
+could succeed where manual vector/graph calls failed.
+
+**What happened:** The agent correctly routed to graph_rag, with a
+well-reasoned explanation ("requires... multi-hop reasoning and
+cause-and-effect analysis"). But since it called the same underlying
+graph_rag_query function, it returned the identical answer and evidence
+as Finding 7 - "Not found in document," despite good, relevant retrieved
+facts.
+
+**Why this matters:** This is the cleanest demonstration yet that routing
+intelligence and generation faithfulness are two independent problems.
+The agent's decision-making layer works correctly - it's not a routing
+failure. The bottleneck is fully isolated to the final generation step,
+now confirmed across all three retrieval modes (vector, graph, agentic).
+This strongly supports prioritizing faithfulness verification and
+generation-stage improvements over further retrieval/routing engineering
+as the primary research contribution.
+
+**Proposal section this feeds:** Section 3 (strongest evidence yet for
+where the real research contribution needs to focus), Section 4
+(demonstrates the finding is robust across all three system modes, not
+an artifact of one retrieval method)

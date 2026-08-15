@@ -12,7 +12,11 @@ from pathlib import Path
 from typing import Optional
 from retrieval.vector_rag import vector_rag_query, RetrievalError
 from retrieval.graph_rag import graph_rag_query, GraphRetrievalError
+from retrieval.vector_rag import RetrievalError
+from retrieval.graph_rag import GraphRetrievalError
 from verification.faithfulness import verify_faithfulness
+from agent import agentic_query
+
 
 
 
@@ -143,6 +147,24 @@ def graph_query_document(request: QueryRequest):
     except Exception as e:
         logger.exception("Graph query failed for doc_id=%s", request.doc_id)
         raise HTTPException(500, detail=f"Graph query failed: {e}")
+
+    return result
+
+@app.post("/agent-query")
+def agent_query_document(request: QueryRequest):
+    record = metadata_store.get_document(request.doc_id)
+    if not record:
+        raise HTTPException(404, detail="Document not found.")
+    if record.get("status") != "ready":
+        raise HTTPException(409, detail=f"Document is not ready yet (status: {record.get('status')}).")
+
+    try:
+        result = agentic_query(request.query, request.doc_id)
+    except (RetrievalError, GraphRetrievalError) as e:
+        raise HTTPException(404, detail=str(e))
+    except Exception as e:
+        logger.exception("Agent query failed for doc_id=%s", request.doc_id)
+        raise HTTPException(500, detail=f"Agent query failed: {e}")
 
     return result
 
