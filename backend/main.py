@@ -16,6 +16,7 @@ from retrieval.vector_rag import RetrievalError
 from retrieval.graph_rag import GraphRetrievalError
 from verification.faithfulness import verify_faithfulness
 from agent import agentic_query
+from compare import compare_query
 
 
 
@@ -165,6 +166,22 @@ def agent_query_document(request: QueryRequest):
     except Exception as e:
         logger.exception("Agent query failed for doc_id=%s", request.doc_id)
         raise HTTPException(500, detail=f"Agent query failed: {e}")
+
+    return result
+
+@app.post("/compare")
+def compare_document(request: QueryRequest):
+    record = metadata_store.get_document(request.doc_id)
+    if not record:
+        raise HTTPException(404, detail="Document not found.")
+    if record.get("status") != "ready":
+        raise HTTPException(409, detail=f"Document is not ready yet (status: {record.get('status')}).")
+
+    try:
+        result = compare_query(request.query, request.doc_id)
+    except Exception as e:
+        logger.exception("Compare failed for doc_id=%s", request.doc_id)
+        raise HTTPException(500, detail=f"Compare failed: {e}")
 
     return result
 

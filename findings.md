@@ -300,3 +300,34 @@ as the primary research contribution.
 where the real research contribution needs to focus), Section 4
 (demonstrates the finding is robust across all three system modes, not
 an artifact of one retrieval method)
+
+---
+## Finding 11 — Compare mode: all three retrieval strategies converge on the same faithfulness failure
+**Date:** Aug 14, 2026
+**Phase:** Phase 9 (Compare mode)
+
+**What I did:** Built a single endpoint that runs vector RAG, GraphRAG,
+and the agentic mode on the same question simultaneously, verifying each
+answer's faithfulness automatically, and ran it on the risk-factors
+question used throughout Findings 1-10.
+
+**What happened:** All three modes returned "Not found in document" with
+a LOW faithfulness verdict (score 0). GraphRAG and agentic mode retrieved
+genuinely relevant, well-filtered evidence (25 facts directly about risk
+and revenue); vector RAG's retrieval was noisier. All three failed at
+the same final step: converting available evidence into a synthesized
+answer.
+
+**Why this matters:** This is the cleanest, most reproducible piece of
+evidence in the project. Retrieval strategy (fast similarity search vs.
+relationship graph traversal vs. automatic routing) made essentially no
+difference to the outcome - all three architectures share the same
+bottleneck. This strongly supports the proposal's central claim: faithful
+generation from evidence, not retrieval strategy choice, is the open
+problem worth a dedicated research contribution.
+
+**Proposal section this feeds:** Section 4 (primary evidence table -
+this finding IS the table), Section 3 (final, strongest justification for
+the verifier as the core contribution), Section 1 (closes the loop on
+the opening example)
+
