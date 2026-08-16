@@ -34,8 +34,10 @@ CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
 
 # --- LLM (Groq — free tier, OpenAI-compatible API) ---
-LLM_MODEL = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
-GROQ_BASE_URL = "https://api.groq.com/openai/v1"
+
+
+LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.0-flash")
+GROQ_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
 # --- Server ---
 CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
