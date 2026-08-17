@@ -158,6 +158,7 @@ def query_document(request: QueryRequest):
     _require_ready_document(request.doc_id)
     try:
         result = vector_rag_query(request.query, request.doc_id, request.top_k)
+        result["faithfulness"] = verify_faithfulness(result["answer"], result.get("sources", []))
     except RetrievalError as e:
         raise HTTPException(404, detail=str(e))
     except Exception as e:
@@ -171,6 +172,7 @@ def graph_query_document(request: QueryRequest):
     _require_ready_document(request.doc_id)
     try:
         result = graph_rag_query(request.query, request.doc_id)
+        result["faithfulness"] = verify_faithfulness(result["answer"], result.get("graph_facts", []))
     except GraphRetrievalError as e:
         raise HTTPException(404, detail=str(e))
     except Exception as e:
@@ -184,6 +186,8 @@ def agent_query_document(request: QueryRequest):
     _require_ready_document(request.doc_id)
     try:
         result = agentic_query(request.query, request.doc_id)
+        evidence = result.get("sources") or result.get("graph_facts") or []
+        result["faithfulness"] = verify_faithfulness(result["answer"], evidence)
     except (RetrievalError, GraphRetrievalError) as e:
         raise HTTPException(404, detail=str(e))
     except Exception as e:
@@ -211,3 +215,19 @@ def verify_answer(request: VerifyRequest):
         logger.exception("Faithfulness verification failed")
         raise HTTPException(500, detail=f"Verification failed: {e}")
     return result
+
+
+@app.get("/graph/{doc_id}")
+def get_graph(doc_id: str):
+    import networkx as nx
+    graph_path = config.GRAPH_DIR / f"{doc_id}.graphml"
+    if not graph_path.exists():
+        raise HTTPException(404, detail="No graph found for this document.")
+
+    G = nx.read_graphml(str(graph_path))
+    nodes = [{"id": n} for n in G.nodes]
+    links = [
+        {"source": u, "target": v, "relation": d.get("relation", "")}
+        for u, v, d in G.edges(data=True)
+    ]
+    return {"nodes": nodes, "links": links}

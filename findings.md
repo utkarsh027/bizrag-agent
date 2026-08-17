@@ -405,3 +405,23 @@ is needed to make this reliability consistent rather than occasional.
 **Proposal section this feeds:** Section 4 (balances the narrative -
 shows both failure and success modes), Section 3 (motivates making this
 transparency systematic via the verifier rather than relying on luck)
+``
+## Finding 15 — Compare mode UI confirms consistent faithfulness gap across a fourth distinct question
+**Date:** Aug 17, 2026
+**Phase:** Phase 7/9 (Frontend + Compare mode, final verification)
+
+**What happened:** Asked "How do residual connections and layer
+normalization work together in the transformer architecture?" through
+the completed Compare UI. All three modes (vector_rag, graph_rag, and
+agentic → vector_rag) returned "Not found in document" with LOW (0%)
+faithfulness, rendered cleanly with the Ledger Meter visual signature
+across all three cards.
+
+**Why this matters:** Fourth independent question (after Findings 4, 7,
+10, 13) reproducing the identical failure signature - retrieval
+architecture choice does not resolve the generation-faithfulness gap.
+This screenshot is the clearest single visual artifact of the entire
+project: three architectures, one measured, consistent, automatically-
+flagged failure mode.
+
+**Proposal section this feeds:** Section 4 (primary visual evidence — this screenshot IS the figure)
