@@ -331,3 +331,77 @@ this finding IS the table), Section 3 (final, strongest justification for
 the verifier as the core contribution), Section 1 (closes the loop on
 the opening example)
 
+``
+## Finding 12 — Free-tier LLM provider limits required a mid-project provider swap
+**Date:** Aug 16, 2026
+**Phase:** Phase 7 (Frontend integration testing)
+
+**What happened:** Groq's free tier rate-limited across multiple fresh
+signups because new accounts were tied to the same organization ID
+(likely fraud-prevention linking). Switched the LLM provider to Google
+Gemini (gemini-3.5-flash-lite) via its OpenAI-compatible endpoint - a
+2-line config change, since all LLM calls were centralized through one
+config module from the start.
+
+**Why this matters:** Validates a real architectural decision made early
+in the project - centralizing all LLM client instantiation behind
+config.py meant a full provider swap took minutes, not hours, with zero
+changes to retrieval, graph, agent, or verifier logic. Worth noting as
+both a limitation (free-tier reliability is a real constraint for
+research prototyping) and a design strength (provider abstraction paid
+off immediately when needed).
+
+**Proposal section this feeds:** Section 4 (engineering evidence), brief
+mention in limitations/future work (Section 5/6 - cost and reliability
+considerations for scaling beyond free tiers)
+
+```
+## Finding 13 — Generation-faithfulness gap reproduces on a completely different LLM provider
+**Date:** Aug 16, 2026
+**Phase:** Phase 7 (Frontend testing, post Gemini switch)
+
+**What I did:** Asked GraphRAG "What is self-attention and how does it
+relate to multi-head attention?" using gemini-3.5-flash-lite (switched
+providers after Groq rate limiting - Finding 12).
+
+**What happened:** The graph retrieved a directly relevant fact -
+"Transformers --[uses]--> self-attention module" - among 6 retrieved
+facts. The answer was still "Not found in document," reproducing the
+exact failure pattern from Findings 4, 7, and 10 (all on Groq's
+Llama-3.3-70B), now on an entirely different model family and provider.
+
+**Why this matters:** This strengthens the generality of the core
+finding considerably - it's not an artifact of one specific LLM's
+quirks, but appears to be a more structural gap in how LLMs reason over
+short, disconnected relationship-graph facts versus continuous prose.
+This makes the case for claim-level faithfulness verification stronger
+and more broadly applicable, not tied to a single model choice.
+
+**Proposal section this feeds:** Section 3 and 4 - cross-model
+replication is meaningfully stronger evidence than a single-provider
+result; worth highlighting as it shows the problem isn't provider-specific
+
+```
+## Finding 14 — Agentic synthesis degrades gracefully when one retrieval branch fails
+**Date:** Aug 17, 2026
+**Phase:** Phase 6/7 (Agent + frontend testing)
+
+**What happened:** Agent chose "both" strategies for a definition +
+relationship question. GraphRAG's branch returned no results (this
+document's small 16-entity graph didn't match the question's terms),
+but the synthesis step explicitly acknowledged this ("the graph search
+yielded no results") rather than silently failing or hallucinating, and
+still produced a complete, accurate answer from the vector RAG branch alone.
+
+**Why this matters:** This is the first clean example of appropriate,
+transparent uncertainty handling in the whole project - the system
+correctly signaled which evidence source it actually used rather than
+presenting a synthesized answer as if both sources contributed equally.
+A positive counterexample to Findings 4/7/10/13, useful for showing the
+system isn't uniformly bad at faithfulness, just inconsistent -
+strengthening the case that a systematic verifier (not ad hoc prompting)
+is needed to make this reliability consistent rather than occasional.
+
+**Proposal section this feeds:** Section 4 (balances the narrative -
+shows both failure and success modes), Section 3 (motivates making this
+transparency systematic via the verifier rather than relying on luck)
